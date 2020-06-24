@@ -4,7 +4,10 @@ var gridx = cx;
 var gridy = cy;
 var c_height = 300;
 var c_speed = 3;
-var camera_mode = "build";
+var camera_mode = "spec";
+var look_dir;
+var view_dist = 500;
+var look_speed = 50;
 
 var x_click = 0;
 var y_click = 0;
@@ -20,6 +23,7 @@ var path = [];
 function setup(){
 	createCanvas(1024, 768, WEBGL);
 	enemies.push(new create_enemy(1000, 500, 20));
+	look_dir = PI/2;
 	setup_path();
 }
 
@@ -45,7 +49,7 @@ function draw(){
 	gridx = (cx-cx%50)+25;
 	gridy = (cy-cy%50)+25;
 
-	place_towers();
+	//place_towers();
 	tower_loop();
 	draw_towers();
 
@@ -62,17 +66,43 @@ function camera_control(){
 	let s = keyIsDown('83') != null ? keyIsDown('83') : false;
 	let d = keyIsDown('68') != null ? keyIsDown('68') : false;
 
-	let horz = a - d;
-	let vert = s - w;
-	cx += horz * c_speed;
-	cy += vert * c_speed;
+	let q = keyIsDown(LEFT_ARROW)!= null ? keyIsDown(LEFT_ARROW) : false;
+	let e = keyIsDown(RIGHT_ARROW)!= null ? keyIsDown(RIGHT_ARROW) : false;
 
-	camera(cx, cy, -c_height, cx, cy, 0, 0, 1, 0);
+
+	if(camera_mode == "build"){
+		let horz = a - d;
+		let vert = s - w;
+		cx += horz * c_speed;
+		cy += vert * c_speed;
+
+		camera(cx, cy, -c_height, cx, cy, 0, 0, 1, 0);
+	}
+	else if(camera_mode == "spec"){
+		look_dir += (q-e)/look_speed;
+		if(w){
+			cx += cos(look_dir)*c_speed;
+			cy += sin(look_dir)*c_speed;
+		}
+		if(a){
+			cx += cos(look_dir + PI/2)*c_speed;
+			cy += sin(look_dir + PI/2)*c_speed;
+		}
+		if(s){
+			cx += cos(look_dir + PI)*c_speed;
+			cy += sin(look_dir + PI)*c_speed;
+		}
+		if(d){
+			cx += cos(look_dir - PI/2)*c_speed;
+			cy += sin(look_dir - PI/2)*c_speed;
+		}
+
+		camera(cx, cy, -c_height, cx + cos(look_dir)*view_dist, cy + sin(look_dir)*view_dist, 20, 0, 0, 1)
+	}
 }
 
 function place_towers(){
-	let space = keyIsDown('32') != null ? keyIsDown('32') : false;
-	if(space){
+	if(camera_mode == "build"){
 		for(let i = 0; i < towers.length; i++){
 			if(gridx == towers[i].xpos && gridy == towers[i].ypos)
 				return;
@@ -212,6 +242,18 @@ function draw_path(){
 function mousePressed(){
 	x_click = mouseX - width/2;
 	y_click = mouseY - height/2;
+}
+
+function keyPressed(){
+	if(key === 'e'){
+		if(camera_mode == "build")
+			camera_mode = "spec";
+		else if(camera_mode == "spec")
+			camera_mode = "build";
+	}
+	if(key === ' '){
+		place_towers();
+	}
 }
 
 /// STRUCTS ///
