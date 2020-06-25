@@ -14,6 +14,13 @@ var current_tower = "none";
 var stock = [];
 var shop_cursor = 0;
 
+var life = 100;
+var wave = 0;
+var waves = [];
+var wave_timer = 0;
+var wave_counter = 0;
+var ongoing = false;
+
 var x_click = 0;
 var y_click = 0;
 
@@ -33,14 +40,14 @@ function preload(){
 
 function setup(){
 	createCanvas(1024, 768, WEBGL);
-	enemies.push(new create_enemy(1000, 500, 150, 2));
-	enemies.push(create_scout(1000, 200));
+//	enemies.push(new create_enemy(1000, 500, 150, 2));
+//	enemies.push(create_scout(1000, 200));
 	look_dir = PI/2;
+
 	setup_path();
+	setup_waves();
 
 	textFont(font);
-	textSize(width/12);
-	textAlign(CENTER, CENTER,);
 }
 
 function setup_path(){
@@ -49,9 +56,18 @@ function setup_path(){
 	path[2] = [1500, 800];
 	path[3] = [1500, 1500];
 	path[4] = [2000, 1500];
+	path[5] = [2000, 2200];
+	path[6] = [1200, 2200];
+	path[7] = [1200, 2500];
 }
 
-
+function setup_waves(){
+	waves[0] = ["infantry", "infantry", "infantry", "infantry"];
+	waves[1] = ["infantry", "infantry", "infantry", "infantry", "infantry", "infantry"];
+	waves[2] = ["scout", "scout", "infantry", "infantry", "infantry", "infantry", "scout", "scout"];
+	waves[3] = ["scout", "scout", "scout", "scout", "scout", "infantry", "scout", "scout"];
+	waves[4] = ["bruiser", "bruiser"];
+}
 
 
 
@@ -67,17 +83,37 @@ function draw(){
 	gridx = (cx-cx%50)+25;
 	gridy = (cy-cy%50)+25;
 
+	if(ongoing)
+		wave_loop();
+
 	tower_loop();
 	bullet_loop();
 	enemy_loop();
 
-	if(camera_mode != "shop"){
+	if(camera_mode == "build" || camera_mode == "spec"){
 		draw_cursor();
 		draw_ground();
 		draw_path();
 		draw_enemies();
 		draw_towers();
 		draw_bullets();
+	}
+
+	if(life <= 0){
+		camera_mode = "loss";
+		camera();
+		fill(255);
+		textSize(width/8);
+		textAlign(CENTER, CENTER);
+		text("game over", 0, 0);
+	}
+	if(wave == waves.length){
+		camera_mode = "win";
+		camera();
+		fill(255);
+		textSize(width/8);
+		textAlign(CENTER, CENTER);
+		text("you win!", 0, 0);
 	}
 }
 
@@ -134,7 +170,10 @@ function place_towers(){
 			if(gridx == towers[i].xpos && gridy == towers[i].ypos)
 				return;
 		}
-		towers.push(new create_tower(gridx, gridy, 60, "glue"));
+		let atk_spd = 60;
+		if(current_tower == "rocket")
+			atk_spd = 85;
+		towers.push(new create_tower(gridx, gridy, atk_spd, current_tower));
 	}
 }
 
@@ -150,6 +189,7 @@ function enemy_loop(){
 		}
 
 		if(c_enem.hp <= 0){
+			money+=25;
 			enemies.splice(i, 1);
 			i--;
 			continue;
@@ -162,6 +202,13 @@ function enemy_loop(){
 			if(abs(path[c_enem.flag+1][0] - c_enem.xpos) < 10 && abs(path[c_enem.flag+1][1] - c_enem.ypos) < 10){
 				c_enem.flag++;
 			}
+		}
+		else{
+			life -= c_enem.hp;
+
+			enemies.splice(i, 1);
+			i--;
+			continue
 		}
 	}
 }
@@ -191,9 +238,16 @@ function bullet_loop(){
 	for(let i = 0; i < bullets.length; i++){
 		let c_bul = bullets[i];
 		let targ = c_bul.target;
+		if(targ.hp <= 0){
+			bullets.splice(i, 1);
+			i--;
+			break;
+
+		}
+		console.log(targ);
 		
 		let dir = atan2(c_bul.ypos - targ.ypos, c_bul.xpos - targ.xpos);
-		let mv_spd = 5;
+		let mv_spd = 10;
 		c_bul.xpos += -cos(dir)*mv_spd;
 		c_bul.ypos += -sin(dir)*mv_spd;
 		
@@ -201,7 +255,7 @@ function bullet_loop(){
 			let c_enem = enemies[k];
 			if(abs(c_bul.xpos - c_enem.xpos) < 20 && abs(c_bul.ypos - c_enem.ypos) < 20){
 				if(c_bul.type == "regular"){
-					c_enem.hp-=3;
+					c_enem.hp-=5;
 					bullets.splice(i, 1);
 					i--;
 					break;
@@ -213,6 +267,12 @@ function bullet_loop(){
 					i--;
 					break;
 				}
+				else if(c_bul.type == "rocket"){
+					c_enem.hp-=10;
+					bullets.splice(i, 1);
+					i--;
+					break;
+				}
 			}
 		}
 	}
@@ -220,25 +280,47 @@ function bullet_loop(){
 
 function shop_loop(){
 	fill(255);
-	text("money", -width/2 + 120, height/2-50);
+	textSize(width/12);
+	textAlign(LEFT, CENTER);
+	text("money: " + money, -width/2 + 30, height/2-50);
+
+	text("wave: " + wave, -width/2 + 30, -height/2+30);
+
+	textAlign(RIGHT, CENTER);
+	text("life: " + life, width/2 - 30, height/2-50);
 
 	noStroke();
 	fill(200, 200, 0);
 
 	push();
 	translate(-100, -100, 300);
+	fill(255);
 	box(50);
 	pop();
+	fill(255);
+	textSize(width/30);
+	textAlign(CENTER, CENTER);
+	text("REGULAR: 250$", -200, -100);
 
 	push();
 	translate(0, -100, 300);
-	box(50);
+	fill(200, 200, 0);
+	box(35, 50, 35);
 	pop();
+	fill(255);
+	textSize(width/30);
+	textAlign(CENTER, CENTER);
+	text("GLUE: 250$", 0, -100);
 
 	push();
 	translate(100, -100, 300);
-	box(50);
+	fill(0, 0, 200);
+	box(70, 50, 70);
 	pop();
+	fill(255);
+	textSize(width/30);
+	textAlign(CENTER, CENTER);
+	text("ROCKET: 350$", 200, -100);
 
 	push();
 	translate(-100, 0, 300);
@@ -346,6 +428,38 @@ function shop_loop(){
 	}
 }
 
+function wave_loop(){
+	let startx = 1000;
+	let starty = 500;
+
+	if(wave_timer > 0){
+		wave_timer--;
+	}
+	if(wave_timer == 0){
+		if(wave_counter < waves[wave].length){
+			wave_timer = 60;
+			switch(waves[wave][wave_counter]){
+				case "infantry":
+					enemies.push(create_infantry(startx, starty));
+					break;
+				case "scout":
+					enemies.push(create_scout(startx, starty));
+					break;
+				case "bruiser":
+					enemies.push(create_bruiser(startx, starty));
+					break;
+			}
+			wave_counter++;
+		}
+		else if(enemies.length == 0){
+			ongoing = false;
+			wave++;
+			wave_counter = 0;
+			money += wave*100;
+		}
+	}
+}
+
 
 
 //DRAWING//
@@ -374,9 +488,23 @@ function draw_towers(){
 
 		push();
 		noStroke();
-		fill(255);
 		translate(c_tower.xpos, c_tower.ypos, 0);
-		box(50, 50, 50);
+
+		switch(c_tower.bul_type){
+			case "regular":
+				fill(255);
+				box(50, 50, 50);
+				break;
+			case "glue":
+				fill(200, 200, 0);
+				box(30, 30, 50);
+				break;
+			case "rocket":
+				fill(0, 0, 200);
+				box(70, 70, 50);
+				break;
+		}
+
 		pop();
 	}
 }
@@ -387,9 +515,23 @@ function draw_enemies(){
 
 		push();
 		noStroke();
-		fill(255, 0, 0);
 		translate(c_enem.xpos, c_enem.ypos, 0);
-		sphere(25);
+
+		switch(c_enem.type){
+			case "infantry":
+				fill(255, 0, 0);
+				sphere(25);
+				break;
+			case "scout":
+				fill(220, 0, 220);
+				sphere(15);
+				break;
+			case "bruiser":
+				fill(200, 0, 0);
+				sphere(35);
+				break;
+		}
+
 		pop();
 	}
 }
@@ -434,21 +576,6 @@ function mousePressed(){
 }
 
 function keyPressed(){
-	if(key === 'e'){
-		if(camera_mode == "build")
-			camera_mode = "spec";
-		else if(camera_mode == "spec")
-			camera_mode = "build";
-		else if(camera_mode == "shop")
-			camera_mode = "build";
-	}
-	if(key === ' '){
-		place_towers();
-	}
-	if(key === 'q'){
-		camera_mode = "shop";
-	}
-
 	if(camera_mode == "shop"){
 		if(keyCode === RIGHT_ARROW){
 			shop_cursor++;
@@ -461,6 +588,58 @@ function keyPressed(){
 		}
 		if(keyCode === DOWN_ARROW){
 			shop_cursor+=3;
+		}
+		if(shop_cursor > 8)
+			shop_cursor = 8;
+		if(shop_cursor < 0)
+			shop_cursor = 0;
+		if(key === ' '){
+			switch(shop_cursor){
+				case 0:
+					if(money >= 250){
+						current_tower = "regular";
+						money -= 250;
+					}
+					break;
+				case 1:
+					if(money >= 250){
+						current_tower = "glue";
+						money -= 250;
+					}
+					break;
+				case 2:
+					if(money >= 350){
+						current_tower = "rocket";
+						money -= 350;
+					}
+					break;
+			}
+			camera_mode = "build";
+		}
+		if(key === 'q'){
+			camera_mode = "spec";
+		}
+	}
+	else{
+		if(key === 'e'){
+			if(camera_mode == "build")
+				camera_mode = "spec";
+			else if(camera_mode == "spec")
+				camera_mode = "build";
+			else if(camera_mode == "shop")
+				camera_mode = "build";
+		}
+		if(key === ' '){
+			if(current_tower != "none"){
+				place_towers();
+				current_tower = "none";
+			}
+		}
+		if(key === 'q'){
+			camera_mode = "shop";
+		}
+		if(keyCode === ENTER){
+			ongoing = true;
 		}
 	}
 }
@@ -480,11 +659,12 @@ function create_tower(xpos, ypos, max_cool, bul_type){
 	this.cooldown = 0;
 }
 
-function create_enemy(xpos, ypos, hp, mvspd){
+function create_enemy(xpos, ypos, hp, mvspd, type){
 	this.xpos = xpos;
 	this.ypos = ypos;
 	this.hp = hp;
 	this.mvspd = mvspd;
+	this.type = type;
 
 	this.flag = 0;
 	this.glued = false;
@@ -492,13 +672,13 @@ function create_enemy(xpos, ypos, hp, mvspd){
 }
 
 function create_bruiser(xpos, ypos){
-	return new create_enemy(xpos, ypos, 30, 0.8);
+	return new create_enemy(xpos, ypos, 30, 0.8, "bruiser");
 }
 function create_infantry(xpos, ypos){
-	return new create_enemy(xpos, ypos, 15, 2);
+	return new create_enemy(xpos, ypos, 15, 2, "infantry");
 }
 function create_scout(xpos, ypos){
-	return new create_enemy(xpos, ypos, 5, 3.5);
+	return new create_enemy(xpos, ypos, 10, 3.5, "scout");
 }
 
 function create_bullet(xpos, ypos, dmg, target, type){
