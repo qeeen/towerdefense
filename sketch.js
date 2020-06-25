@@ -67,6 +67,13 @@ function setup_waves(){
 	waves[2] = ["scout", "scout", "infantry", "infantry", "infantry", "infantry", "scout", "scout"];
 	waves[3] = ["scout", "scout", "scout", "scout", "scout", "infantry", "scout", "scout"];
 	waves[4] = ["bruiser", "bruiser"];
+	waves[5] = ["bruiser", "infantry", "infantry", "bruiser"];
+	waves[6] = ["scout", "scout", "bruiser", "infantry", "infantry", "bruiser", "infantry"];
+	waves[7] = ["bruiser", "bruiser", "scout", "scout", "bruiser", "infantry", "infantry", "infantry", "bruiser", "infantry", "infantry"];
+	waves[8] = ["infantry", "infantry", "infantry", "bruiser", "infantry", "infantry", "infantry", "bruiser", "scout", "scout", "bruiser", "scout", "scout", "infantry"];
+	waves[9] = ["bruiser", "bruiser", "bruiser", "scout", "scout", "scout", "scout", "scout", "scout", "bruiser", "infantry", "infantry"];
+	waves[10] = ["bruiser", "infantry", "infantry", "bruiser", "infantry", "infantry", "bruiser", "bruiser", "bruiser", "bruiser", "infantry", "scout", "infantry"];
+	waves[10] = ["bruiser", "infantry", "scout", "bruiser", "infantry", "infantry", "bruiser", "scout", "scout", "scout", "infantry", "bruiser", "bruiser", "infantry", "infantry", "bruiser", "bruiser", "bruiser"];
 }
 
 
